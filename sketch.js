@@ -1,154 +1,102 @@
-var bow , arrow,  background, redB, pinkB, greenB ,blueB ,arrowGroup;
-var bowImage, arrowImage, green_balloonImage, red_balloonImage, pink_balloonImage ,blue_balloonImage, backgroundImage;
+const Engine = Matter.Engine;
+const World = Matter.World;
+const Bodies = Matter.Bodies;
+const Constraint = Matter.Constraint;
 
-var score =0;
-function preload(){  
-  backgroundImage = loadImage("background0.png");
-  
-  arrowImage = loadImage("arrow0.png");
-  bowImage = loadImage("bow0.png");
-  red_balloonImage = loadImage("red_balloon0.png");
-  green_balloonImage = loadImage("green_balloon0.png");
-  pink_balloonImage = loadImage("pink_balloon0.png");
-  blue_balloonImage = loadImage("blue_balloon0.png");
+var engine, world, backgroundImg,boat;
+var canvas, angle, tower, ground, cannon;
+var balls = [];
+var boats = [];
+
+function preload() {
+  backgroundImg = loadImage("./assets/background.gif");
+  towerImage = loadImage("./assets/tower.png");
 }
 
 function setup() {
-  createCanvas(400, 400);
-  
-  // criar o fundo
-  scene = createSprite(0,0,400,400);
-  scene.addImage(backgroundImage);
-  scene.scale = 2.5
-  
-  // criando arco para atirar a flecha
-  bow = createSprite(380,220,20,50);
-  bow.addImage(bowImage); 
-  bow.scale = 1;
-  
-  score = 0  
-  redB= new Group();
-  greenB= new Group();
-  blueB= new Group();
-  pinkB= new Group();
-  arrowGroup= new Group();  
+  canvas = createCanvas(1200, 600);
+  engine = Engine.create();
+  world = engine.world;
+  angleMode(DEGREES)
+  angle = 15
+
+  ground = Bodies.rectangle(0, height - 1, width * 2, 1, { isStatic: true });
+  World.add(world, ground);
+
+  tower = Bodies.rectangle(160, 350, 160, 310, { isStatic: true });
+  World.add(world, tower);
+
+  cannon = new Cannon(180, 110, 130, 100, angle);
+  boat = new Boat(width-79, height - 60, 170, 170,-80);
 }
 
 function draw() {
- background(0);
-  // movendo o fundo
-  scene.velocityX = -3 
+  background(189);
+  image(backgroundImg, 0, 0, width, height);
 
-  if (scene.x < 0){
-    scene.x = scene.width/2;
+  Engine.update(engine);
+
+  
+  rect(ground.position.x, ground.position.y, width * 2, 1);
+ 
+
+  push();  
+  imageMode(CENTER);
+  image(towerImage,tower.position.x, tower.position.y, 160, 310);
+  pop();
+
+
+  Matter.Body.setVelocity(boat.body,{x:-0.9, y:0})
+  boat.display()
+  
+
+  for (var i = 0; i < balls.length; i++) {
+    showCannonBalls(balls[i], i);
   }
-  
-  //movendo o arco
-  bow.y = World.mouseY
-  
-  // soltar a flecha quando a tecla de espaço for pressionada
-  if (keyDown("space")) {
-    createArrow();  
+
+  cannon.display();
+  showBoats();
+}
+
+function keyPressed() {
+  if (keyCode === DOWN_ARROW) {
+    var cannonBall = new CannonBall(cannon.x, cannon.y);
+    cannonBall.trajectory = [];
+    Matter.Body.setAngle(cannonBall.body, cannon.angle);
+    balls.push(cannonBall);
   }
-  
-  //criando inimigos contínuos
-  var select_balloon = Math.round(random(1,4));
-  
-  if (World.frameCount % 100 == 0) {
-    if (select_balloon == 1) {
-      redBalloon();
-    } else if (select_balloon == 2) {
-      greenBalloon();
-    } else if (select_balloon == 3) {
-      blueBalloon();
-    } else {
-      pinkBalloon();
+}
+
+function showCannonBalls(ball, index) {
+  if (ball) {
+    ball.display();
+  }
+}
+
+
+
+function keyReleased() {
+  if (keyCode === DOWN_ARROW) {
+    balls[balls.length - 1].shoot();
+  }
+}
+
+function showBoats() {
+  if (boats.length>0) {
+    if (boats[boats.length - 1] === undefined || boats[boats.length - 1].body.position.x < width - 300 ){ 
+      var positions = [-40, -60, -70, -20]; 
+      var position = random(positions); var boat = new Boat (width, height - 100, 170, 170, positions); boats.push(boat);
+     for (var i=0;i<boats.length;i++) {
+      if (boats[i]) {
+        Matter.Body.setVelocity(boats[i].body,{x:-0.9,y:0});
+        boats[i].display();
+
+      }
+      }
     }
-  }
-  
-  if (arrowGroup.isTouching(redB)) {
-    
-    //redB.destroyEach();
-    //redB.destroy();
-    //redB.Each();
-    //ballon.destroyEach();
-    
-    arrowGroup.destroyEach();
-    score=score+1;
+  } else {
+    var boat = new Boat(width, height-60,170,170,-60);
+    boats.push(boat);
   }
 
-  if (arrowGroup.isTouching(greenB)) {
-    greenB.destroyEach();
-    arrowGroup.destroyEach();
-    score=score+3;
-  }
-
-  if (arrowGroup.isTouching(blueB)) {
-    blueB.destroyEach();
-    arrowGroup.destroyEach();
-    score=score+2;
-  }
-
-  if (arrowGroup.isTouching(pinkB)) {
-    pinkB.destroyEach();
-    arrowGroup.destroyEach();
-    score=score+1;
-  }
-
-  drawSprites();
-  text("Pontuação: "+ score, 300,50);
-}
-
-function redBalloon() {
-  var red = createSprite(0,Math.round(random(20, 370)), 10, 10);
-  red.addImage(red_balloonImage);
-  red.velocityX = 3;
-  red.lifetime = 150;
-  red.scale = 0.1;
-  redB.add(red);
-}
-
-function blueBalloon() {
-  var blue = createSprite(0,Math.round(random(20, 370)), 10, 10);
-  blue.addImage(blue_balloonImage);
-  blue.velocityX = 3;
-  blue.lifetime = 150;
-  blue.scale = 0.1;
-  blueB.add(blue);
-}
-
-function greenBalloon() {
-  var green = createSprite(0,Math.round(random(20, 370)), 10, 10);
-  green.addImage(green_balloonImage);
-  green.velocityX = 3;
-  green.lifetime = 150;
-  green.scale = 0.1;
-  greenB.add(green);
-}
-
-function pinkBalloon() {
-  var pink = createSprite(0,Math.round(random(20, 370)), 10, 10);
-  pink.addImage(pink_balloonImage);
-  pink.velocityX = 3;
-  pink.lifetime = 150;
-  pink.scale = 1
-  pinkB.add(pink);
-}
-
-
-// Criando flechas para o arco
- function createArrow() {
-  var arrow= createSprite(100, 100, 60, 10);
-  arrow.addImage(arrowImage);
-  arrow.x = 360;
-  arrow.y=bow.y;
-  arrow.velocityX = -4;
-  arrow.lifetime = 100;
-  arrow.scale = 0.3;
-  
-  //arrowGroup.addGroup(arrow);
-  //arrow.add(arrowGroup);
-  //arrowGroup.add();
-  //arrowGroup.add(arrow);
-   
 }
